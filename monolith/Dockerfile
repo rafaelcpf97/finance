@@ -1,46 +1,49 @@
-# Stage 1: Build React frontend and install server dependencies
+# syntax=docker/dockerfile:1
+
+############################
+# Stage 1: Build client + install server deps
+############################
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy client files and install dependencies
-COPY client/package.json client/package-lock.json* ./client/
+# ---------- CLIENT (Vite React) ----------
 WORKDIR /app/client
+
+# Copy only package files first to leverage Docker cache
+COPY client/package*.json ./
 RUN npm ci
 
-# Copy client source and build
+# Copy the rest of the client source and build
 COPY client/ .
+# "build": "tsc && vite build" -> outputs to ../server/public
 RUN npm run build
 
-# Install server dependencies
-WORKDIR /app
-COPY server/package.json server/package-lock.json* ./server/
+# ---------- SERVER ----------
 WORKDIR /app/server
-RUN npm ci --only=production
 
+# Copy only server package files and install prod deps
+COPY server/package*.json ./
+RUN npm ci --omit=dev   # or: npm ci --only=production
+
+# Copy the rest of the server source code
+COPY server/ .
+
+############################
 # Stage 2: Production image
+############################
 FROM node:20-alpine
 
-WORKDIR /app
-
-# Copy server source code first
-COPY server/ ./server/
-
-# Copy server dependencies
-COPY --from=builder /app/server/node_modules ./server/node_modules
-
-# Copy built React app to server/public
-COPY --from=builder /app/client/dist ./server/public
-
-# Set working directory to server
+# App will live in /app/server
 WORKDIR /app/server
 
-# Expose port
-EXPOSE 3000
+# Copy server code + node_modules + built public/ from builder
+# (remember: Vite already wrote to /app/server/public in the builder stage)
+COPY --from=builder /app/server ./
 
-# Set environment variables
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Start the server
+EXPOSE 3000
+
 CMD ["node", "src/index.js"]

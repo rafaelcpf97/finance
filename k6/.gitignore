@@ -1,0 +1,10 @@
+# k6 test results and outputs
+*.json
+*.html
+*.csv
+
+# k6 cloud results
+cloud-results/
+
+# Local test data
+test-data/

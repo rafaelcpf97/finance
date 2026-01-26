@@ -1,0 +1,84 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'finance-app'
+    environment: 'development'
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']
+
+# Load rules once and periodically evaluate them
+rule_files:
+  # - "rules/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # cAdvisor - Container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    metrics_path: '/metrics'
+
+  # Node Exporter - Host metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # Monolith Application
+  # Try both Docker service name and host.docker.internal
+  # Prometheus will scrape whichever is available
+  - job_name: 'monolith'
+    static_configs:
+      - targets: 
+          - 'finance-monolith:3000'  # If running in Docker on finance-network
+          - 'host.docker.internal:3000'  # If running on host
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # Microservices - API Gateway
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Microservices - User Service
+  - job_name: 'user-service'
+    static_configs:
+      - targets: ['user-service:3001']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Microservices - Wallet Service
+  - job_name: 'wallet-service'
+    static_configs:
+      - targets: ['wallet-service:3002']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Microservices - Transaction Service
+  - job_name: 'transaction-service'
+    static_configs:
+      - targets: ['transaction-service:3003']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Microservices - Notification Service
+  - job_name: 'notification-service'
+    static_configs:
+      - targets: ['notification-service:3004']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # k6 metrics are pushed via remote write API
+  # No scrape config needed - k6 pushes directly to /api/v1/write
